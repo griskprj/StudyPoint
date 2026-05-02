@@ -13,6 +13,7 @@ class User(db.Model):
     last_name = db.Column(db.String(64), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
+    refresh_token = db.Column(db.String(512), nullable=True)
 
     def set_password(self, password):
         """ Hashes and store the password. """
@@ -21,6 +22,22 @@ class User(db.Model):
     def check_password(self, password):
         """ Checks if the password matches the hash. """
         return check_password_hash(self.password_hash, password)
+
+    def to_dict(self):
+        """ Secure User Presentation """
+        return {
+            'id': self.id,
+            'email': self.email,
+            'role': self.role,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'is_active': self.is_active
+        }
+    
+    @classmethod
+    def get_by_id(cls, user_id):
+        """ Get user by id """
+        return cls.query.get(user_id)
 
     def __repr__(self):
         return f'<User {self.email} ({self.role})>'
