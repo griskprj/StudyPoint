@@ -82,7 +82,7 @@ def login():
       'error': 'Ваш аккаунт был заблокирован'
     }), 403
 
-  access_token = create_access_token(identity=str(user.id))
+  access_token = create_access_token(identity=str(user.id), additional_claims={'role': user.role})
   refresh_token = create_refresh_token(identity=str(user.id))
 
   user.refresh_token = refresh_token

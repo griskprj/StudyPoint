@@ -1,6 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { isAuthenticated } from '../services/auth'
 
+function getUserRole() {
+  const token = localStorage.getItem('access_token')
+  if (!token) return null
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.role
+  } catch {
+    return null
+  }
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -25,6 +37,22 @@ const router = createRouter({
       name: 'dashboard',
       component: () => import('../views/DashboardView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin',
+      component: () => import('../views/AdminDashboardView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+      children: [
+        {
+          path: '',
+          redirect: '/admin/users'
+        },
+        {
+          path: 'users',
+          name: 'admin-users',
+          component: () => import('../views/AdminUsersView.vue')
+        }
+      ]
     }
   ]
 })
@@ -34,6 +62,8 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.requiresAuth && !authenticated) {
     next('/login')
+  } else if (to.meta.requiresAdmin && getUserRole() !== 'admin') {
+    next('/dashboard')
   } else if (to.meta.requiresGuest && authenticated) {
     next('/dashboard')
   } else {

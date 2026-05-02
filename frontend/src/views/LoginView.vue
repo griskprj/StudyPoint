@@ -46,8 +46,13 @@ export default {
         })
         const { access_token, refresh_token } = response.data
         setTokens(access_token, refresh_token)
-
-        this.$router.push('/dashboard')
+        
+        const role = response.data.user.role
+        if (role === 'admin') {
+          this.$router.push('/admin')
+        } else {
+          this.$router.push('/dashboard')
+        }
       } catch (err) {
         this.error = err.response?.data?.error || 'Ошибка входа'
       }
