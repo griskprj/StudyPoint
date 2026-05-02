@@ -1,0 +1,44 @@
+<template>
+  <h1>Дашборд</h1>
+  <p v-if="loading">Загрузка данных...</p>
+  <div v-else-if="user">
+    <h2>Добро пожаловать, {{ user.first_name || user.email }}!</h2>
+    <p>Роль: {{ user.role }}</p>
+    <button @click="logout">Выйти</button>
+  </div>
+  <div v-else style="color: red;">
+    Не удалось загрузить данные пользователя.
+  </div>
+</template>
+
+<script>
+import api from '../services/api';
+import { removeTokens } from '../services/auth';
+
+export default {
+  data() {
+    return {
+      user: null,
+      loading: true
+    }
+  },
+  
+  async created() {
+    try {
+      const response = await api.get('/auth/me')
+      this.user = response.data.user
+    } catch (err) {
+      this.user = null
+    } finally {
+      this.loading = false
+    }
+  },
+
+  methods: {
+    logout() {
+      removeTokens()
+      this.$router.push('/login')
+    }
+  }
+}
+</script>
