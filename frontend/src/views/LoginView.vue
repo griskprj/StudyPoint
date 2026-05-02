@@ -1,5 +1,5 @@
 <template>
-  <div class="home">
+  <div class="container">
     <h1>StudyPoint - Вход</h1>
     <form @submit.prevent="login">
       <div>
@@ -7,14 +7,19 @@
         <input v-model="email" type="email" placeholder="student@test.com">
       </div>
       <div>
-        <label>Парль:</label>
+        <label>Пароль:</label>
         <input v-model="password" type="password" placeholder="******">
       </div>
       <button type="submit">Войти</button>
     </form>
-    <div v-if="error">
-      {{ error }}
-    </div>
+    <div v-if="error" class="error">{{ error }}</div>
+    <p v-if="$route.query.registered" style="color: green;">
+      Регистрация успешна! Теперь войдите.
+    </p>
+    <p>
+      Нет аккаунта?
+      <router-link to="/register">Зарегистрироваться</router-link>
+    </p>
     </div>
 </template>
 
@@ -50,3 +55,14 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.container {
+  max-width: 500px;
+  margin: 50px auto;
+}
+.error {
+  color: #d32f2f;
+  margin-top: 10px;
+}
+</style>
