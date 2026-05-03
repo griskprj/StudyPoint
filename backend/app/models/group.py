@@ -18,8 +18,8 @@ class Group(db.Model):
   students = db.relationship('User', secondary=group_students, lazy='subquery',
                             backref=db.backref('groups_as_student', lazy=True))
 
-  def to_dict(self):
-    return {
+  def to_dict(self, include_students=False):
+    result = {
       'id': self.id,
       'name': self.name,
       'subject': self.subject,
@@ -27,3 +27,7 @@ class Group(db.Model):
       'teacher': self.teacher.to_dict() if self.teacher else None,
       'students_count': len(self.students)
     }
+    if include_students:
+      result['students'] = [s.to_dict() for s in self.students]
+
+    return result

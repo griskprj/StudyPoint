@@ -6,6 +6,7 @@ from app.utils.decorators import admin_required
 from app.models.group import Group
 from app.models.user import User
 
+
 admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/groups', methods=['GET'])
@@ -14,6 +15,18 @@ admin_bp = Blueprint('admin', __name__)
 def get_groups():
   groups = Group.query.all()
   return jsonify([g.to_dict() for g in groups]), 200
+
+@admin_bp.route('/groups/<int:group_id>', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_group(group_id):
+  group = Group.query.get(group_id)
+  if not group:
+    return jsonify({
+      'error': 'Группа не найдена'
+    }), 404
+
+  return jsonify(group.to_dict(include_students=True)), 200
 
 @admin_bp.route('/groups', methods=['POST'])
 @jwt_required()
