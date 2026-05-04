@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.extensions import db
 from app.utils.decorators import admin_required
@@ -13,6 +13,58 @@ admin_bp = Blueprint('admin', __name__)
 @jwt_required()
 @admin_required
 def get_groups():
+  """ Получить все группы.
+  
+  Возвращает список групп. Требует аутентификации и роли администратора.
+
+  Returns:
+    Словарь с данными групп:
+    {
+      "id": int,
+      "name": str,
+      "object": str,
+      "is_active": bool,
+      "teacher_id": int,
+      "teacher": object,
+      "students": objects
+    }
+
+  Raises:
+    PermissionError: Если пользователь не авторизован или не является администратором
+
+  Example:
+    GET /api/admin/groups
+    Authorization: Bearer <token>
+
+    Response 200:
+    {
+      {
+        "id": 1,
+        "name": "ПРОФМАТ-ЕГЭ-1",
+        "object": "Математика",
+        "is_active": True,
+        "teacher_id": 2,
+        "teacher": {
+          "id": 1,
+          "email": "teacher@test.com",
+          "first_name": "Мария",
+          "last_name": "Свербицкая",
+          "role": "teacher",
+          "created_at": "2026-04-05T10:00:00",
+          "is_active": True
+        },
+        "students": {
+          "id": 1,
+          "email": "student@test.com",
+          "first_name": "Иван",
+          "last_name": "Иванов",
+          "role": "student",
+          "created_at": "2026-04-05T10:00:00",
+          "is_active": True
+        }
+      }
+    }
+  """
   groups = Group.query.all()
   return jsonify([g.to_dict() for g in groups]), 200
 
@@ -227,3 +279,83 @@ def set_group_teacher(group_id):
   db.session.commit()
 
   return jsonify(group.to_dict()), 200
+
+
+@admin_bp.route('/users/<int:user_id>', methods=['PUT'])
+@jwt_required()
+@admin_required
+def edit_user(user_id):
+  user = User.query.get(user_id)
+  if not user:
+    return jsonify({
+      'error': 'Пользователь не найден'
+    }), 404
+
+  data = request.get_json()
+
+  try:
+    user.email = data.get('email') or user.email
+    user.first_name = data.get('firstName') or user.first_name
+    user.last_name = data.get('lastName') or user.last_name
+  
+    if user.role == 'teacher' and data.get('role') != user.role:
+      teacher_groups = Group.query.filter_by(teacher_id=user.id).all()
+      for g in teacher_groups:
+        g.teacher = None
+        g.teacher_id = None
+
+    user.role = data.get('role') or user.role
+  
+  except Exception as e:
+    return jsonify({
+      'error': 'Ошибка сервера'
+    }), 500
+
+  db.session.commit()
+
+  return jsonify(user.to_dict()), 200
+
+@admin_bp.route('/users/<int:user_id>/toggle-active', methods=['PUT'])
+@jwt_required()
+@admin_required
+def toggle_user_active(user_id):
+  current_user = get_jwt_identity()
+  if current_user == user_id:
+    return jsonify({
+      'error': 'Вы не можете заблокировать сами себя'
+    }), 400
+  
+  user = User.query.get(user_id)
+  if not user:
+    return jsonify({
+      'error': 'Пользователь не найден'
+    }), 404
+  
+  user.is_active = not(user.is_active)
+  
+  db.session.commit()
+
+  return jsonify(user.to_dict()), 200
+
+@admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@jwt_required()
+@admin_required
+def delete_user(user_id):
+  current_user = get_jwt_identity()
+  if user_id == current_user:
+    return jsonify({
+      'error': 'Вы не можете удалить сами себя'
+    })
+  
+  user = User.query.get(user_id)
+  if not user:
+    return jsonify({
+      'error': 'Пользователь не найден'
+    }), 404
+
+  db.session.delete(user)
+  db.session.commit()
+
+  return jsonify({
+    'message': 'Пользователь успешно удален!'
+  }), 200

@@ -21,6 +21,8 @@ def register():
 
 
   email = data.get('email')
+  first_name = data.get('firstName')
+  last_name = data.get('lastName')
   password = data.get('password')
   role = data.get('role')
 
@@ -33,13 +35,18 @@ def register():
       'error': 'Длина пароля не менее 6 символов'
     }), 400
 
+  if not first_name or not last_name:
+    return jsonify({
+      'error': 'Имя и фамилия обязательны'
+    }), 400
+
   if User.query.filter_by(email=email).first():
     return jsonify({
       'error': 'Пользователь с такой почтой уже существует'
     }), 409
 
   try:
-    user = User(email=email, role=role)
+    user = User(email=email, first_name=first_name, last_name=last_name, role=role)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()

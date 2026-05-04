@@ -1,11 +1,25 @@
 from app.extensions import db
 
+""" Вспомогательная таблица для учеников группы. """
 group_students = db.Table('group_students',
   db.Column('group_id', db.Integer, db.ForeignKey('groups.id'), primary_key=True),
   db.Column('student_id', db.Integer, db.ForeignKey('users.id'), primary_key=True)
 )
 
 class Group(db.Model):
+  """ Модель группы.
+  
+  Attributes:
+    id: Уникальный идентификатор.
+    name: Название группы.
+    subject: Предмет группы.
+    is_active: Активна ли группа.
+    teacher_id: Уникальный идентификатор преподавателя группы.
+
+    teacher: Учитель группы.
+    students: Ученики группы.
+  """
+
   __tablename__ = 'groups'
 
   id = db.Column(db.Integer, primary_key=True)
@@ -18,7 +32,12 @@ class Group(db.Model):
   students = db.relationship('User', secondary=group_students, lazy='subquery',
                             backref=db.backref('groups_as_student', lazy=True))
 
-  def to_dict(self, include_students=False):
+  def to_dict(self, include_students=False) -> dict:
+    """ Представление группы.
+    
+    Args:
+      include_students: Нужно ли в результате указать учеников
+    """
     result = {
       'id': self.id,
       'name': self.name,

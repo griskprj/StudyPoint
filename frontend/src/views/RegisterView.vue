@@ -8,6 +8,14 @@
           <input v-model="email" type="email" placeholder="student@test.com" required>
         </label>
         <label>
+          Имя
+          <input v-model="firstName" type="text" placeholder="Иван" required>
+        </label>
+        <label>
+          Фамилия
+          <input v-model="lastName" type="text" placeholder="Иванов" required>
+        </label>
+        <label>
           Пароль
           <input v-model="password" type="password" placeholder="Минимум 6 символов" required>
         </label>
@@ -37,6 +45,8 @@ export default {
   data() {
     return {
       email: '',
+      firstName: '',
+      lastName: '',
       password: '',
       role: 'student',
       error: null
@@ -49,6 +59,8 @@ export default {
       try {
         await api.post('/auth/register', {
           email: this.email,
+          firstName: this.firstName,
+          lastName: this.lastName,
           password: this.password,
           role: this.role
         })
