@@ -20,31 +20,33 @@
       </label>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Email</th>
-          <th>Роль</th>
-          <th>Имя</th>
-          <th>Фамилия</th>
-          <th>Активен</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="user in users" :key="user.id">
-          <td>{{ user.id }}</td>
-          <td>{{ user.email }}</td>
-          <td>{{ user.role }}</td>
-          <td>{{ user.first_name || '_' }}</td>
-          <td>{{ user.last_name || '_' }}</td>
-          <td>{{ user.is_active ? 'Да' : 'Нет' }}</td>
-        </tr>
-        <tr v-if="users.length === 0">
-          <td colspan="6">Пользователи не найдены</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Email</th>
+            <th>Роль</th>
+            <th>Имя</th>
+            <th>Фамилия</th>
+            <th>Активен</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="user in users" :key="user.id">
+            <td>{{ user.id }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.role }}</td>
+            <td>{{ user.first_name || '_' }}</td>
+            <td>{{ user.last_name || '_' }}</td>
+            <td>{{ user.is_active ? 'Да' : 'Нет' }}</td>
+          </tr>
+          <tr v-if="users.length === 0">
+            <td colspan="6">Пользователи не найдены</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -86,5 +88,10 @@ export default {
   display: flex;
   gap: 20px;
   margin-bottom: 20px;
+}
+
+.table-container {
+  overflow-y: auto;
+  overflow-x: auto;
 }
 </style>

@@ -65,6 +65,54 @@ def create_group():
 
   return jsonify(group.to_dict()), 201
 
+@admin_bp.route('/groups/<int:group_id>', methods=['PUT'])
+@jwt_required()
+@admin_required
+def edit_group(group_id):
+  group = Group.query.get(group_id)
+  if not group:
+    return jsonify({
+      'error': 'Группа не найдена'
+    }), 404
+  
+  data = request.get_json()
+  if not data:
+    return jsonify({
+      'error': 'Нет данных'
+    }), 400
+
+  if not data.get('name') or not data.get('subject'):
+    return jsonify({
+      'error': 'Название группы и предмет обязательны'
+  }), 400
+  
+  group.name = data.get('name')
+  group.subject = data.get('subject')
+  group.teacher_id = data.get('teacher.id')
+
+  db.session.commit()
+
+  return jsonify(group.to_dict())
+
+@admin_bp.route('/groups/<int:group_id>', methods=['DELETE'])
+@jwt_required()
+@admin_required
+def delete_group(group_id):
+  group = Group.query.get(group_id)
+  if not group:
+    return jsonify({
+      'error': 'Группа не найдена'
+    }), 404
+
+  db.session.delete(group)
+  db.session.commit()
+
+  return jsonify({
+    'success': True,
+    'message': 'Группа успешно удалена!'
+  }), 200
+
+
 @admin_bp.route('/groups/<int:group_id>/students', methods=['POST'])
 @jwt_required()
 @admin_required

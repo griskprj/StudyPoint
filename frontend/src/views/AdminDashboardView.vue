@@ -1,6 +1,12 @@
 <template>
   <div class="container">
-    <h1>Панель администратора</h1>
+    <div class="header">
+      <h1>StudyPoint</h1>
+      <button @click="logout">Выйти</button>
+    </div>
+    
+    <h3>Панель администратора</h3>
+
 
     <nav>
       <ul>
@@ -14,3 +20,35 @@
     <router-view />
   </div>
 </template>
+
+<script>
+import { removeTokens } from '../services/auth';
+
+export default {
+  methods: {
+    logout() {
+      removeTokens()
+      this.$router.push('/login')
+    }
+  }
+}
+</script>
+
+<style scoped>
+.header {
+  margin-top: 24px;
+  margin-bottom: 24px;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.header-top {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+</style>

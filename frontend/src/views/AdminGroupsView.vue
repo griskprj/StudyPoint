@@ -39,6 +39,7 @@
      </form>
 
      <!-- Таблица групп -->
+    <div class="table-container">
       <table>
         <thead>
           <tr>
@@ -68,6 +69,7 @@
           </tr>
         </tbody>
       </table>
+    </div>
   </div>
 </template>
 
@@ -134,9 +136,13 @@ export default {
 <style scoped>
 .filters {
   display: flex;
-  gap: 20px;
-  align-items: end;
-  margin-bottom: 20px;
+  flex-direction: column;
+  margin-bottom: 24px;
+}
+
+.table-container {
+  overflow-y: auto;
+  overflow-x: auto;
 }
 
 .create-form {

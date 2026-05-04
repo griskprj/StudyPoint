@@ -1,13 +1,18 @@
 <template>
-  <h1>Дашборд</h1>
-  <p v-if="loading">Загрузка данных...</p>
-  <div v-else-if="user">
-    <h2>Добро пожаловать, {{ user.first_name || user.email }}!</h2>
-    <p>Роль: {{ user.role }}</p>
-    <button @click="logout">Выйти</button>
-  </div>
-  <div v-else style="color: red;">
-    Не удалось загрузить данные пользователя.
+  <div class="container">
+    <div class="header">
+      <h1>StudyPoint</h1>
+      <button @click="logout">Выйти</button>
+    </div>
+
+    <p v-if="loading">Загрузка данных...</p>
+    <div v-else-if="user">
+      <h2>Добро пожаловать, {{ user.first_name || user.email }}!</h2>
+      <p>Роль: {{ user.role }}</p>
+    </div>
+    <div v-else style="color: red;">
+      Не удалось загрузить данные пользователя.
+    </div>
   </div>
 </template>
 
@@ -42,3 +47,14 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 24px;
+  margin-bottom: 48px;
+}
+</style>
