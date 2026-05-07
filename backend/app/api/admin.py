@@ -910,7 +910,7 @@ def toggle_user_active(user_id):
       }
   """
   current_user = get_jwt_identity()
-  if current_user == user_id:
+  if int(current_user) == int(user_id):
       return jsonify({
           'error': 'Вы не можете заблокировать сами себя'
       }), 400

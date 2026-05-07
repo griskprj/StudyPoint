@@ -15,13 +15,17 @@
         <p><strong>Фамилия:</strong> {{ user.last_name }}</p>
         <p><strong>Email:</strong> {{ user.email }}</p>
         <p><strong>Роль:</strong> {{ user.role }}</p>
+        <p><strong>Статус:</strong> {{ user.is_active ? 'Активен' : 'Заблокирован' }}</p>
       </div>
     </div>
 
     <div class="user-actions">
         <button @click="showEditForm = !showEditForm">
-            {{ showEditForm ? 'Отмена' : 'Редактировать'}}
-          </button>
+          {{ showEditForm ? 'Отмена' : 'Редактировать'}}
+        </button>
+        <button @click="toggleActiveUser" :class="user.is_active ? 'danger' : 'success'">
+          {{ user.is_active ? 'Заблокировать' : 'Разблокировать'}}
+        </button>
         <button @click="deleteUser" class="danger">Удалить</button>
     </div>
 
@@ -151,7 +155,26 @@ export default {
         await api.delete(`/admin/users/${this.user.id}`)
         this.$router.push('/admin/user')
       } catch (err) {
+        alert('Ошибка удаления пользователя')
         console.error('Ошибка удаления пользователя:', err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async toggleActiveUser() {
+      if (!confirm(`Вы уверены, что хотиете ${ this.user.is_active ? 'Заблокировать' : 'Разблокировать'} пользователя?`)) {
+        return
+      }
+
+      this.loading = true
+
+      try {
+        await api.put(`/admin/users/${this.user.id}/toggle-active`)
+        this.user.is_active = !this.user.is_active
+      } catch (err) {
+        alert('Ошибка изменения статуса пользователя')
+        console.error('Ошибка изменения статуса пользователя:', err)
       } finally {
         this.loading = false
       }
@@ -215,6 +238,14 @@ button {
 
 .danger {
   background-color: #d32f2f;
+  color: white;
+}
+.warning {
+  background-color: #d0d32f;
+  color: white;
+}
+.success {
+  background-color: #2fd337;
   color: white;
 }
 </style>
