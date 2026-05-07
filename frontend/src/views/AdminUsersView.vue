@@ -30,6 +30,7 @@
             <th>Имя</th>
             <th>Фамилия</th>
             <th>Активен</th>
+            <th>Действия</th>
           </tr>
         </thead>
         <tbody>
@@ -40,6 +41,7 @@
             <td>{{ user.first_name || '_' }}</td>
             <td>{{ user.last_name || '_' }}</td>
             <td>{{ user.is_active ? 'Да' : 'Нет' }}</td>
+            <td><router-link :to="'/admin/users/' + user.id">Подробнее</router-link></td>
           </tr>
           <tr v-if="users.length === 0">
             <td colspan="6">Пользователи не найдены</td>

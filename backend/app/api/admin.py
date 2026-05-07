@@ -773,8 +773,8 @@ def edit_user(user_id):
   Request Body:
       {
           "email": str (optional) - Новый email,
-          "firstName": str (optional) - Новое имя,
-          "lastName": str (optional) - Новая фамилия,
+          "first_name": str (optional) - Новое имя,
+          "last_name": str (optional) - Новая фамилия,
           "role": str (optional) - Новая роль (student/teacher/admin/parent)
       }
 
@@ -838,8 +838,8 @@ def edit_user(user_id):
 
   try:
       user.email = data.get('email') or user.email
-      user.first_name = data.get('firstName') or user.first_name
-      user.last_name = data.get('lastName') or user.last_name
+      user.first_name = data.get('first_name') or user.first_name
+      user.last_name = data.get('last_name') or user.last_name
   
       if user.role == 'teacher' and data.get('role') != user.role:
           teacher_groups = Group.query.filter_by(teacher_id=user.id).all()
@@ -972,7 +972,7 @@ def delete_user(user_id):
       }
   """
   current_user = get_jwt_identity()
-  if user_id == current_user:
+  if int(user_id) == int(current_user):
       return jsonify({
           'error': 'Вы не можете удалить сами себя'
       }), 400
@@ -989,3 +989,44 @@ def delete_user(user_id):
   return jsonify({
       'message': 'Пользователь успешно удален!'
   }), 200
+
+@admin_bp.route('/users/<int:user_id>', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({
+            'error': 'Пользователь не найден'
+        }), 404
+
+    groups = None
+    groups_data = []
+
+
+    if user.role == 'teacher':
+        groups = Group.query.filter_by(teacher_id=user.id).all()
+
+        for g in groups:
+            groups_data.append({
+                'id': g.id,
+                'name': g.name,
+                'subject': g.subject,
+                'teacher': g.teacher.email or g.teacher.id or None
+            })
+            print(groups_data)
+    elif user.role == 'student':
+        groups = user.groups
+
+        for g in groups:
+            groups_data.append({
+                'id': g.id,
+                'name': g.name,
+                'subject': g.subject,
+                'teacher': g.teacher.email or g.teacher.id or None
+            })
+
+    return jsonify({
+        'user': user.to_dict(),
+        'groups': groups_data
+    })
