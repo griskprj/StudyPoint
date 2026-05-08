@@ -6,11 +6,13 @@
     <div v-if="loading">Загрузка...</div>
 
     <div v-else-if="group">
-      <h2>{{ group.name }}</h2>
       <div class="group-details">
-        <p><strong>Предмет: <br></strong> {{ group.subject }}</p>
-        <p><strong>Преподаватель: <br></strong> {{ group.teacher?.email || 'Не назначен' }}</p>
-        <p><strong>Учеников: <br></strong> {{ group.students_count }}</p>
+        <h2>{{ group.name }}</h2>
+        <div class="details">
+          <p><strong>Предмет: <br></strong> {{ group.subject }}</p>
+          <p><strong>Преподаватель: <br></strong> {{ group.teacher?.email || 'Не назначен' }}</p>
+          <p><strong>Учеников: <br></strong> {{ group.students_count }}</p>
+        </div>
       </div>
 
       <div class="group-actions">
@@ -19,6 +21,8 @@
         </button>
         <button @click="deleteGroup" class="danger">Удалить группу</button>
       </div>
+
+      <hr>
 
       <!-- Edit group form -->
       <form v-if="showEditForm" @submit.prevent="editGroup" class="edit-form">
@@ -43,18 +47,33 @@
         <div v-if="editError" class="error">{{ editError }}</div>
       </form>
 
-      <!-- Set teacher -->
-      <form @submit.prevent="setTeacher" class="inline-form">
-        <label>
-          Назначить преподавателя (ID):
-          <input v-model="teacherId" type="number" placeholder="ID преподавателя" style="width: 200px;">
-        </label>
-        <div class="add-actions">
-          <button type="submit">Сохранить</button>
-          <button type="button" @click="removeTeacher" class="secondary btn">Убрать</button>
-        </div>
-      </form>
-      <div v-if="teacherError" class="error">{{ teacherError }}</div>
+      <div class="group-forms">
+        <!-- Set teacher -->
+        <form @submit.prevent="setTeacher" class="inline-form">
+          <label>
+            Назначить преподавателя (ID):
+            <input v-model="teacherId" type="number" placeholder="ID преподавателя" style="width: 200px;">
+          </label>
+          <div class="add-actions">
+            <button type="submit">Сохранить</button>
+            <button type="button" @click="removeTeacher" class="secondary btn">Убрать</button>
+          </div>
+        </form>
+        <div v-if="teacherError" class="error">{{ teacherError }}</div>
+  
+        <hr>
+  
+        <!-- Add student -->
+        <form @submit.prevent="addStudent" class="inline-form">
+          <label>
+            Добавить ученика (ID):
+            <input v-model.number="newStudentId" type="number" placeholder="ID ученика" style="width: 200px;">
+          </label>
+          <button type="submit">Добавить</button>
+          <button type="button" @click="removeStudent(newStudentId)" class="secondary btn">Убрать</button>
+        </form>
+        <div v-if="addError" class="error">{{ addError }}</div>
+      </div>
 
       <hr>
 
@@ -88,15 +107,7 @@
         </table>
       </div>
       
-      <!-- Add student -->
-      <form @submit.prevent="addStudent" class="inline-form">
-        <label>
-          Добавить ученика (ID):
-          <input v-model.number="newStudentId" type="number" placeholder="ID ученика" style="width: 200px;">
-        </label>
-        <button type="submit">Добавить</button>
-      </form>
-      <div v-if="addError" class="error">{{ addError }}</div>
+      
     </div>
 
     <div v-else class="error">Группа не найдена</div>
@@ -202,8 +213,6 @@ export default {
       } catch (err) {
         this.teacherError = err.response?.data?.error || 'Ошибка назначения преподавателя'
       }
-
-      this.fetchGroup()
     },
 
     async removeTeacher() {
@@ -259,20 +268,48 @@ button {
   border: none;
 }
 
+.group-forms {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+
+  justify-content: space-evenly;
+}
+
 .inline-form {
   display: flex;
   flex-direction: column;
+  width: 100%;
+
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 25px;
+  border-radius: 25px;
+  border: 2px solid #4a739a;
 }
 
 .group-details {
-  padding-top: 12px;
-  padding-bottom: 12px;
+  text-align: center;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 32px;
+
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 25px;
+  border-radius: 25px;
+  border: 2px solid #4a739a;
 
   margin-bottom: 24px;
+}
 
-  text-align: center;
-  background-color: rgba(0, 0, 0, 0.1);
-  border-radius: 15px;
+.details {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+  width: 100%;
 }
 
 .group-actions {
@@ -309,5 +346,11 @@ button {
 .danger {
   background-color: #d32f2f;
   color: white;
+}
+
+@media (max-width: 756px) {
+  .group-forms {
+    flex-direction: column;
+  }
 }
 </style>

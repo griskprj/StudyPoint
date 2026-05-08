@@ -516,7 +516,7 @@ def add_student_to_group(group_id):
   group.students.append(student)
   db.session.commit()
 
-  return jsonify(group.to_dict()), 200
+  return jsonify(group.to_dict(include_students=True)), 200
 
 
 @admin_bp.route('/groups/<int:group_id>/students/<int:student_id>', methods=['DELETE'])
