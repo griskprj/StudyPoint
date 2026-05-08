@@ -40,9 +40,15 @@ export default {
   },
 
   methods: {
-    logout() {
-      removeTokens()
-      this.$router.push('/login')
+    async logout() {
+      try {
+        await api.post('/auth/logout')
+      } catch(err) {
+        // ignore
+      } finally {
+        removeTokens()
+        this.$router.push('/login')
+      }
     }
   }
 }

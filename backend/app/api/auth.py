@@ -311,4 +311,88 @@ def get_current_user():
     return jsonify({
         'user': user.to_dict()
     }), 200
-  
+
+@auth_bp.route('/refresh', methods=['POST'])
+def refresh():
+    """Обновить access-токен с помощью refresh-токена.
+    
+    Получает refresh-токен из запроса, проверяет его валидность
+    и выдаёт новый access-токен.
+
+    Request Body:
+        {
+            "refresh_token": str - Refresh-токен пользователя (обязательно)
+        }
+
+    Returns:
+        JSON-объект с новыми токенами (200):
+        {
+            "access_token": str - Новый access-токен,
+            "refresh_token": str - Новый refresh-токен (опционально, если нужно обновить и его)
+        }
+
+    Raises:
+        AuthenticationError: Если refresh-токен недействителен или не найден (401).
+        
+    Note:
+        Можно также опционально обновлять refresh-токен для большей безопасности
+        (refresh token rotation).
+    """
+
+    data = request.get_json()
+    if not data:
+        return jsonify({
+            'error': 'No data provided'
+        }), 400
+
+    refresh_token = data.get('refresh_token')
+    if not refresh_token:
+        return jsonify({
+            'error': 'Refresh token required'
+        }), 400
+
+    user = User.query.filter_by(refresh_token=refresh_token).first()
+    if not user or not user.is_active:
+        return jsonify({
+            'error': 'Invalid refresh token'
+        }), 401
+    
+    access_token = create_access_token(
+        identity=str(user.id),
+        additional_claims={'role': user.role}
+    )
+
+    new_refresh_token = create_refresh_token(identity=str(user.id))
+    user.refresh_token = new_refresh_token
+    db.session.commit()
+
+    return jsonify({
+        'access_token': access_token,
+        'refresh_token': new_refresh_token
+    }), 200
+
+@auth_bp.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    """Выйти из системы - удалить refresh-токен пользователя.
+    
+    Удаляет refresh-токен из базы данных, делая его недействительным.
+    Требует аутентификации.
+
+    Returns:
+        JSON-объект с подтверждением выхода (200):
+        {
+            "message": str
+        }
+    """
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if user:
+        user.refresh_token = None
+        db.session.commit()
+    
+    return jsonify({
+        'message': 'Successfully logged out'
+    }), 200
