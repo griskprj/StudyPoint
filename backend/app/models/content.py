@@ -1,366 +1,155 @@
 from app.extensions import db
 from datetime import datetime, timezone
-from sqlalchemy.orm import validates
-import json
 
-# --- Вспомогательные таблицы (ассоциации) ---
+class Subject(db.Model):
+    __tablename__ = 'subjects'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False) # Математика, Русский язык
+    code = db.Column(db.String(20), unique=True) # MATH, RUS
+    exam_type = db.Column(db.String(5)) # 'EGE' или 'OGE'
 
-# Связь "Тест-Группа" (многие ко многим): один тест может быть назначен многим группам, 
-# в одной группе может быть много назначенных тестов.
-quiz_group_association = db.Table('quiz_group_association',
-  db.Column('quiz.id', db.Integer, db.ForeignKey('quizzes.id'), primary_key=True),
-  db.Column('group_id', db.Integer, db.ForeignKey('groups.id'), primary_key=True)
-)
+    # Связи
+    topics = db.relationship('Topic', backref='subject', lazy='dynamic', cascade='all, delete-orphan')
+    tests = db.relationship('Test', backref='subject', lazy='dynamic')
+    homeworks = db.relationship('Homework', backref='subject', lazy='dynamic')
 
-# Связь "ДЗ-Группа" (многие ко многим): одно ДЗ может быть назначено многим группам.
-homework_group_association = db.Table('homework_group_association',
-  db.Column('homework_id', db.Integer, db.ForeignKey('homeworks.id'), primary_key=True),
-  db.Column('group_id', db.Integer, db.ForeignKey('groups.id'), primary_key=True)
-)
+    def to_dict(self) -> dict:
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'code': self.code,
+            'exam_type': self.exam_type
+        }
 
-# --- Основные модели контента ---
+    def __repr__(self):
+        return f'<Subject {self.name}>'
 
-class Theory(db.Model):
-  """Модель теоретического материала."""
-  __tablename__ = 'theories'
+class Topic(db.Model):
+    __tablename__ = 'topics'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False)
+    parent_topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'))
 
-  id = db.Column(db.Integer, primary_key=True)
-  title = db.Column(db.String(255), nullable=False)
-  content = db.Column(db.Text, nullable=False)
-  subject = db.Column(db.String(100), nullable=False)
-  topic = db.Column(db.String(255), nullable=False)
+    materials = db.relationship('Material', backref='topic', lazy='dynamic', cascade='all, delete-orphan')
+    questions = db.relationship('Question', backref='topic', lazy='dynamic')
+    children = db.relationship('Topic', backref=db.backref('parent', remote_side=[id]), lazy='dynamic')
 
-  group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False)
-  group = db.relationship('Group', backref='theories')
+    def __repr__(self):
+        return f'<Topic {self.name} (Subject: {self.subject_id})>'
 
-  author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-  author = db.relationship('User', backref='authored_theories')
+class Material(db.Model):
+    __tablename__ = 'materials'
+    id = db.Column(db.Integer, primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    content_type = db.Column(db.String(20), nullable=False) # 'text', 'pdf', 'link', 'video'
+    text_content = db.Column(db.Text)
+    file_path = db.Column(db.String(500))
+    link_url = db.Column(db.String(500))
+    version = db.Column(db.Integer, default=1)
+    is_published = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
-  attachments = db.Column(db.Text, default='[]') # JSON
+    author = db.relationship('User', backref='materials')
 
-  is_published = db.Column(db.Boolean, default=False)
-  created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-  updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-  
-  def set_attachments(self, file_list):
-    """Принимает список строк (путей к файлам) и сохраняет как JSON."""
-    self.attachments = json.dumps(file_list)
-  
-  def get_attachments(self):
-    """Возвращает список путей к файлам из JSON."""
-    return json.loads(self.attachments) if self.attachments else []
-  
-  def to_dict(self):
-    return {
-        'id': self.id,
-        'title': self.title,
-        'content': self.content,
-        'subject': self.subject,
-        'topic': self.topic,
-        'group_id': self.group_id,
-        'author_id': self.author_id,
-        'attachments': self.get_attachments(),
-        'is_published': self.is_published,
-        'created_at': self.created_at.isoformat() if self.created_at else None,
-        'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-    }
+    def __repr__(self):
+        return f'<Material {self.title} (v{self.version})>'
 
-class Homework(db.Model):
-  """Модель домашнего задания."""
-  __tablename__ = 'homeworks'
+class Test(db.Model):
+    __tablename__ = 'tests'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    duration_minutes = db.Column(db.Integer)
+    passing_score = db.Column(db.Float)
+    is_exam = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
-  id = db.Column(db.Integer, primary_key=True)
-  title = db.Column(db.String(255), nullable=False)
-  description = db.Column(db.Text, nullable=False)
-  subject = db.Column(db.String(100), nullable=False)
-  topic = db.Column(db.String(255), nullable=True)
+    # Связи
+    author = db.relationship('User', backref='tests_authored')
+    questions = db.relationship('Question', backref='test', lazy='dynamic', cascade='all, delete-orphan',
+                                order_by='Question.order')
+    attempts = db.relationship('TestAttempt', backref='test', lazy='dynamic')
 
-  groups = db.relationship('Group', secondary=homework_group_association, backref='homeworks')
-
-  author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-  author = db.relationship('User', backref='authored_homeworks')
-
-  attachments = db.Column(db.Text, default='[]')
-
-  deadline = db.Column(db.DateTime, nullable=False)
-  allow_late_submission = db.Column(db.Boolean, default=False)
-  max_score = db.Column(db.Integer, default=5)
-
-  is_published = db.Column(db.Boolean, default=False)
-  created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-  updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-  
-  def set_attachments(self, file_list):
-    """Принимает список строк (путей к файлам) и сохраняет как JSON."""
-    self.attachments = json.dumps(file_list)
-  
-  def get_attachments(self):
-    """Возвращает список путей к файлам из JSON."""
-    return json.loads(self.attachments) if self.attachments else []
-
-    def to_dict(self, include_groups=False):
-      data = {
-          'id': self.id,
-          'title': self.title,
-          'description': self.description,
-          'subject': self.subject,
-          'topic': self.topic,
-          'author_id': self.author_id,
-          'attachments': self.get_attachments(),
-          'deadline': self.deadline.isoformat() if self.deadline else None,
-          'allow_late_submission': self.allow_late_submission,
-          'max_score': self.max_score,
-          'is_published': self.is_published,
-          'created_at': self.created_at.isoformat() if self.created_at else None,
-          'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-      }
-      if include_groups:
-          data['groups'] = [{'id': g.id, 'name': g.name} for g in self.groups]
-      return data
-
-class HomeworkSubmission(db.Model):
-  """Модель ответа на домашнее задание"""
-  __tablename__ = 'homework_submission'
-
-  id = db.Column(db.Integer, primary_key=True)
-  homework_id = db.Column(db.Integer, db.ForeignKey('homeworks.id'), nullable=False)
-  homework = db.Column('Homework', backref='submission')
-  
-  student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-  student = db.Column('User', backref='homework_submissions')
-
-  answer_text = db.Column(db.Text, nullable=True)
-  attachments = db.Column(db.Text, default='[]')
-
-  submitted_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-  is_late = db.Column(db.Boolean, default=False)
-
-  score = db.Column(db.Integer, nullable=True)
-  comment = db.Column(db.Text, nullable=True)
-  checked_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-  checked_at = db.Column(db.DateTime, nullable=True)
-
-  status = db.Column(db.String(20), default='submitted') # submitted, checked
-
-  def set_attachments(self, file_list):
-    """Принимает список строк (путей к файлам) и сохраняет как JSON."""
-    self.attachments = json.dumps(file_list)
-  
-  def get_attachments(self):
-    """Возвращает список путей к файлам из JSON."""
-    return json.loads(self.attachments) if self.attachments else []
-
-  def to_dict(self):
-    return {
-        'id': self.id,
-        'homework_id': self.homework_id,
-        'student_id': self.student_id,
-        'answer_text': self.answer_text,
-        'attachments': self.get_attachments(),
-        'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None,
-        'is_late': self.is_late,
-        'score': self.score,
-        'comment': self.comment,
-        'status': self.status,
-    }
-
-class Quiz(db.Model):
-  """Модель теста."""
-  __tablename__ = 'quizzes'
-
-  id = db.Column(db.Integer, primary_key=True)
-  title = db.Column(db.String(255), nullable=False)
-  description = db.Column(db.Text, nullable=True)
-  subject = db.Column(db.String(100), nullable=False)
-
-  groups = db.relationship('Group', secondary=quiz_group_association, backref='quizzes')
-
-  author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-  author = db.relationship('User', backref='authored_quizzes')
-  
-  duration_minutes = db.Column(db.Integer, nullable=False)
-  passing_score = db.Column(db.Integer, nullable=False)
-  is_exam = db.Column(db.Boolean, default=False)
-  is_published = db.Column(db.Boolean, default=False)
-
-  created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-  updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-
-  questions = db.relationship('Question', backref='quiz', cascade='all, delete-orphan', lazy='dynamic')
-
-  def to_dict(self, include_questions=False, include_groups=False):
-    data = {
-        'id': self.id,
-        'title': self.title,
-        'description': self.description,
-        'subject': self.subject,
-        'author_id': self.author_id,
-        'duration_minutes': self.duration_minutes,
-        'passing_score': self.passing_score,
-        'is_exam': self.is_exam,
-        'is_published': self.is_published,
-        'created_at': self.created_at.isoformat() if self.created_at else None,
-        'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-        'questions_count': self.questions.count()
-    }
-    if include_questions:
-        data['questions'] = [q.to_dict() for q in self.questions.order_by(Question.order).all()]
-    if include_groups:
-        data['groups'] = [{'id': g.id, 'name': g.name} for g in self.groups]
-    return data
+    def __repr__(self):
+        return f'<Test {self.title}>'
 
 class Question(db.Model):
-  """Модель вопроса для теста."""
-  __tablename__ = 'questions'
+    __tablename__ = 'questions'
+    id = db.Column(db.Integer, primary_key=True)
+    test_id = db.Column(db.Integer, db.ForeignKey('tests.id'), nullable=False)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'))
+    type = db.Column(db.String(20), nullable=False) # 'single_choice', 'multi_choice', 'number_input', 'essay'
+    text = db.Column(db.Text, nullable=False)
+    order = db.Column(db.Integer, default=0)
 
-  id = db.Column(db.Integer, primary_key=True)
-  quiz_id = db.Column(db.Integer, db.ForeignKey('quizzes.id'), nullable=False)
-  
-  question_text = db.Column(db.Text, nullable=False)
-  question_type = db.Column(db.String(20), nullable=False)  # single_choice, multi_choice, number, essay
-  
-  # Для вопросов с выбором (single/multi)
-  options = db.Column(db.Text, nullable=True)  # JSON строка с вариантами ответов, например '["Ответ А", "Ответ Б"]'
-  
-  # Правильный ответ (для single_choice - индекс правильного варианта (int), 
-  # для number - число, для multi_choice - список индексов)
-  correct_answer = db.Column(db.String(255), nullable=False)  # Будем хранить как JSON строку
-  
-  score = db.Column(db.Integer, nullable=False, default=1)  # Балл за вопрос
-  order = db.Column(db.Integer, default=0)  # Порядок в тесте
-  
-  # Привязка к теме предмета (опционально)
-  topic = db.Column(db.String(255), nullable=True)
+    options = db.Column(db.JSON)
+    score = db.Column(db.Float, default=1.0)
 
-  @validates('options', 'correct_answer')
-  def validate_json(self, key, value):
-    """Проверяет, что поля options и correct_answer являются валидным JSON."""
-    if value is None:
-        return '[]' if key == 'options' else None
-    if key == 'options':
-        # Если приходит список, конвертируем в JSON
-        if isinstance(value, list):
-            return json.dumps(value)
-        # Если приходит строка, пытаемся распарсить, чтобы проверить валидность
-        try:
-            json.loads(value)
-            return value
-        except json.JSONDecodeError:
-            raise ValueError("Поле options должно содержать валидную JSON строку")
-    if key == 'correct_answer':
-        # Для multi_choice правильный ответ может быть списком
-        if isinstance(value, (list, int, float)):
-            return json.dumps(value)
-        try:
-            json.loads(value)
-            return value
-        except json.JSONDecodeError:
-            # Если строка не JSON, сохраняем как есть (для текстовых ответов типа essay)
-            return value
-    return value
+    answers = db.relationship('Answer', backref='question', lazy='dynamic')
 
-  def get_options(self):
-    """Возвращает список вариантов ответов."""
-    return json.loads(self.options) if self.options else []
+    def __repr__(self):
+        return f'<Question {self.id}: {self.text[:30]}... ({self.type})>'
 
-  def get_correct_answer(self):
-    """Возвращает правильный ответ в родном типе (int, list, float, str)."""
-    if not self.correct_answer:
-        return None
-    # Пытаемся распарсить как JSON
-    try:
-        return json.loads(self.correct_answer)
-    except json.JSONDecodeError:
-        return self.correct_answer
+# --- Модели для прохождения тестов ---
+class TestAttempt(db.Model):
+    __tablename__ = 'test_attempts'
+    id = db.Column(db.Integer, primary_key=True)
+    test_id = db.Column(db.Integer, db.ForeignKey('tests.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    started_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    completed_at = db.Column(db.DateTime)
+    status = db.Column(db.String(20), default='in_progress') # 'in_progress', 'completed', 'checked'
+    total_score = db.Column(db.Float)
+    max_score = db.Column(db.Float)
 
-  def to_dict(self):
-    return {
-        'id': self.id,
-        'quiz_id': self.quiz_id,
-        'question_text': self.question_text,
-        'question_type': self.question_type,
-        'options': self.get_options(),
-        'correct_answer': self.get_correct_answer(),
-        'score': self.score,
-        'order': self.order,
-        'topic': self.topic,
-    }
+    student = db.relationship('User', backref='test_attempts')
+    answers = db.relationship('Answer', backref='attempt', lazy='dynamic', cascade='all, delete-orphan')
 
-class QuizAttempt(db.Model):
-  """Модель попытки прохождения теста учеником."""
-  __tablename__ = 'quiz_attempts'
+class Answer(db.Model):
+    __tablename__ = 'answers'
+    id = db.Column(db.Integer, primary_key=True)
+    attempt_id = db.Column(db.Integer, db.ForeignKey('test_attempts.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('questions.id'), nullable=False)
+    response = db.Column(db.JSON)
+    score = db.Column(db.Float)
+    is_checked = db.Column(db.Boolean, default=False)
+    checked_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
-  id = db.Column(db.Integer, primary_key=True)
-  quiz_id = db.Column(db.Integer, db.ForeignKey('quizzes.id'), nullable=False)
-  quiz = db.relationship('Quiz', backref='attempts')
-  
-  student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-  student = db.relationship('User', backref='quiz_attempts')
-  
-  started_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-  completed_at = db.Column(db.DateTime, nullable=True)
-  status = db.Column(db.String(20), default='in_progress')  # in_progress, completed
-  
-  score_auto = db.Column(db.Integer, nullable=True)  # Балл за автоматически проверяемые вопросы
-  score_manual = db.Column(db.Integer, nullable=True, default=0) # Балл за эссе (выставляется преподавателем)
-  total_score = db.Column(db.Integer, nullable=True) # Итоговый балл
-  
-  # Связь с ответами
-  answers = db.relationship('QuizAnswer', backref='attempt', cascade='all, delete-orphan')
+    checked_by = db.relationship('User', backref='checked_answers')
 
-  def to_dict(self, include_answers=False):
-    data = {
-        'id': self.id,
-        'quiz_id': self.quiz_id,
-        'student_id': self.student_id,
-        'started_at': self.started_at.isoformat() if self.started_at else None,
-        'completed_at': self.completed_at.isoformat() if self.completed_at else None,
-        'status': self.status,
-        'score_auto': self.score_auto,
-        'score_manual': self.score_manual,
-        'total_score': self.total_score,
-    }
-    if include_answers:
-        data['answers'] = [a.to_dict() for a in self.answers]
-    return data
+class Homework(db.Model):
+    __tablename__ = 'homeworks'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id')) # Привязка к теме
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False)
+    deadline = db.Column(db.DateTime, nullable=False)
+    allow_late_submission = db.Column(db.Boolean, default=False)
+    file_path = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
+    author = db.relationship('User', backref='homeworks_authored')
+    group = db.relationship('Group', backref='homeworks')
+    submissions = db.relationship('HomeworkSubmission', backref='homework', lazy='dynamic', cascade='all, delete-orphan')
 
-class QuizAnswer(db.Model):
-  """Модель ответа на конкретный вопрос в тесте."""
-  __tablename__ = 'quiz_answers'
-
-  id = db.Column(db.Integer, primary_key=True)
-  attempt_id = db.Column(db.Integer, db.ForeignKey('quiz_attempts.id'), nullable=False)
-  question_id = db.Column(db.Integer, db.ForeignKey('questions.id'), nullable=False)
-  question = db.relationship('Question')
-  
-  answer_text = db.Column(db.Text, nullable=True)  # Для essay/number/choice (сохраняем как JSON)
-  is_correct = db.Column(db.Boolean, nullable=True) # Для автоматической проверки
-  score_earned = db.Column(db.Integer, nullable=True) # Балл за этот вопрос
-  
-  # Для эссе, проверяемых вручную
-  manual_score = db.Column(db.Integer, nullable=True)
-  teacher_comment = db.Column(db.Text, nullable=True)
-  checked_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-  checked_at = db.Column(db.DateTime, nullable=True)
-
-  def get_answer_value(self):
-    """Возвращает ответ в родном типе (индекс, список, число, строка)."""
-    if not self.answer_text:
-        return None
-    try:
-        return json.loads(self.answer_text)
-    except json.JSONDecodeError:
-        return self.answer_text
-
-  def to_dict(self):
-    return {
-        'id': self.id,
-        'attempt_id': self.attempt_id,
-        'question_id': self.question_id,
-        'answer': self.get_answer_value(),
-        'is_correct': self.is_correct,
-        'score_earned': self.score_earned,
-        'manual_score': self.manual_score,
-        'teacher_comment': self.teacher_comment,
-    }
+class HomeworkSubmission(db.Model):
+    __tablename__ = 'homework_submissions'
+    id = db.Column(db.Integer, primary_key=True)
+    homework_id = db.Column(db.Integer, db.ForeignKey('homeworks.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    submitted_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    text_response = db.Column(db.Text)
+    file_path = db.Column(db.String(500))
+    status = db.Column(db.String(20), default='submitted')
+    grade = db.Column(db.Float)
+    comment = db.Column(db.Text)
+    checked_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getAccessToken, removeTokens } from './auth'
+import { getAccessToken, removeTokens, getRefreshToken, setTokens } from './auth'
 
 const api = axios.create({
   baseURL: 'http://127.0.0.1:5000/api',
@@ -9,17 +9,17 @@ const api = axios.create({
 })
 
 let isRefreshing = false
-let failuedQueue = []
+let failedQueue = []
 
 function processQueue(error, token = null) {
-  failuedQueue.forEach(prom => {
+  failedQueue.forEach(prom => {
     if (error) {
       prom.reject(error)
     } else {
       prom.resolve(token)
     }
   })
-  failuedQueue = []
+  failedQueue = []
 }
 
 api.interceptors.request.use(
@@ -59,7 +59,7 @@ api.interceptors.response.use(
           throw new Error('No refresh token')
         }
         
-        const response = await axios.post('/api/auth/refresh', {
+        const response = await api.post('/auth/refresh', {
           refresh_token: refreshToken
         })
         

@@ -14,8 +14,11 @@ def create_app(config_class=Config):
 
     from app.api.auth import auth_bp
     from app.api.admin import admin_bp
+    from app.api.teacher import teacher_bp
+
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
 
     @app.route('/api/health')
     def health_check():

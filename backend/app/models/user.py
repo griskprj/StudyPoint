@@ -47,6 +47,19 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     refresh_token = db.Column(db.String(512), nullable=True)
 
+    submissions = db.relationship(
+        'HomeworkSubmission',
+        backref=db.backref('student', uselist=True),
+        foreign_keys='HomeworkSubmission.student_id',
+        lazy='dynamic'
+    )
+    checked_submissions = db.relationship(
+        'HomeworkSubmission',
+        backref=db.backref('checked_by', uselist=True),
+        foreign_keys='HomeworkSubmission.checked_by_id',
+        lazy='dynamic'
+    )
+
     def set_password(self, password: str) -> None:
         """Хешировать и сохранить пароль пользователя.
         
