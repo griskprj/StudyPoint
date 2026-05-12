@@ -76,6 +76,22 @@ class Test(db.Model):
                                 order_by='Question.order')
     attempts = db.relationship('TestAttempt', backref='test', lazy='dynamic')
 
+    def to_dict(self, include_questions=False):
+        result = {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'subject_id': self.subject_id,
+            'author_id': self.author_id,
+            'duration_minutes': self.duration_minutes,
+            'passing_score': self.passing_score,
+            'is_exam': self.is_exam,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+        if include_questions:
+            result['questions'] = [q.to_dict() for q in self.questions.order_by(Question.order).all()]
+        return result
+
     def __repr__(self):
         return f'<Test {self.title}>'
 
@@ -92,6 +108,18 @@ class Question(db.Model):
     score = db.Column(db.Float, default=1.0)
 
     answers = db.relationship('Answer', backref='question', lazy='dynamic')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'test_id': self.test_id,
+            'topic_id': self.topic_id,
+            'type': self.type,
+            'text': self.text,
+            'order': self.order,
+            'options': self.options,
+            'score': self.score
+        }
 
     def __repr__(self):
         return f'<Question {self.id}: {self.text[:30]}... ({self.type})>'
