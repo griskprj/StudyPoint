@@ -38,7 +38,8 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Проверяем, что это 401 и запрос не на /auth/refresh (чтобы избежать цикла)
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })
@@ -62,7 +63,7 @@ api.interceptors.response.use(
         const response = await api.post('/auth/refresh', {
           refresh_token: refreshToken
         })
-        
+
         const { access_token, refresh_token } = response.data
         setTokens(access_token, refresh_token)
         
@@ -75,7 +76,12 @@ api.interceptors.response.use(
         processQueue(refreshError, null)
         removeTokens()
         
-        if (typeof window !== 'undefined') {
+        // Очищаем очередь и редиректим
+        failedQueue = []
+        isRefreshing = false
+        
+        // Проверяем, что мы не на странице логина уже
+        if (window.location.pathname !== '/login') {
           window.location.href = '/login'
         }
         
