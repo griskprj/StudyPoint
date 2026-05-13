@@ -3,7 +3,7 @@
     <div class="auth-card">
       <div class="auth-header">
         <i class="fa fa-map-marker"></i>
-        <h1>StudyPoint - РегистрацияР</h</h1>
+        <h1>StudyPoint - Регистрация</h1>
       </div>
       <form @submit.prevent="register">
         <div class="inputs">
