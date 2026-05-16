@@ -10,11 +10,11 @@ class Subject(db.Model):
 
     # Связи
     topics = db.relationship('Topic', backref='subject', lazy='dynamic', cascade='all, delete-orphan')
-    tests = db.relationship('Test', backref='subject', lazy='dynamic')
+    tests = db.relationship('Test', backref='subject', lazy='dynamic', cascade='all, delete-orphan')
     homeworks = db.relationship('Homework', backref='subject', lazy='dynamic')
 
     def to_dict(self) -> dict:
-        data = {
+        return {
             'id': self.id,
             'name': self.name,
             'code': self.code,

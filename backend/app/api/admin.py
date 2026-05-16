@@ -5,6 +5,7 @@ from app.extensions import db
 from app.utils.decorators import admin_required
 from app.models.group import Group
 from app.models.user import User
+from app.models.content import Subject
 
 
 admin_bp = Blueprint('admin', __name__)
@@ -18,7 +19,7 @@ def get_groups():
   Возвращает список всех групп в системе. Требует аутентификации и роли администратора.
 
   Returns:
-      JSON-массив с данными групп:
+      JSON-массив с данными групп и предметами:
       [
           {
               "id": int,
@@ -28,6 +29,12 @@ def get_groups():
               "teacher_id": int | None,
               "teacher": dict | None,
               "students": list[dict]
+          }
+          {
+            "id": int,
+            "name": str,
+            "code": str,
+            "exam_type": str
           }
       ]
 
@@ -67,10 +74,20 @@ def get_groups():
                   }
               ]
           }
+          {
+            "id": 1,
+            "name": "Математика",
+            "code": "MATH",
+            "exam_type": "EGE"
+          }
       ]
   """
   groups = Group.query.all()
-  return jsonify([g.to_dict() for g in groups]), 200
+  subjects = Subject.query.all()
+  return jsonify({
+    'groups': [g.to_dict() for g in groups],
+    'subjects': [s.to_dict() for s in subjects]
+  }), 200
 
 
 @admin_bp.route('/groups/<int:group_id>', methods=['GET'])
@@ -161,7 +178,7 @@ def create_group():
   Request Body:
       {
           "name": str - Название группы (обязательно),
-          "subject": str - Название предмета (обязательно),
+          "subject_id": int - ID предмета (обязательно),
           "teacher_id": int | None - ID преподавателя (опционально, может быть None)
       }
 
@@ -170,7 +187,7 @@ def create_group():
       {
           "id": int,
           "name": str,
-          "subject": str,
+          "subject_id": int,
           "is_active": bool,
           "teacher_id": int | None,
           "teacher": dict | None,
@@ -179,7 +196,7 @@ def create_group():
 
   Raises:
       NoDataError: Если тело запроса отсутствует (400).
-      ValidationError: Если не указаны name или subject (400).
+      ValidationError: Если не указаны name или subject_id (400).
       ValidationError: Если указанный teacher_id не существует или не является преподавателем (400).
       PermissionError: Если пользователь не авторизован или не является администратором.
 
@@ -191,7 +208,7 @@ def create_group():
       Body:
       {
           "name": "ПРОФМАТ-ЕГЭ-1",
-          "subject": "Математика",
+          "subject_id": "1",
           "teacher_id": 2
       }
 
@@ -199,7 +216,7 @@ def create_group():
       {
           "id": 3,
           "name": "ПРОФМАТ-ЕГЭ-1",
-          "subject": "Математика",
+          "subject_id": "1",
           "is_active": True,
           "teacher_id": 2,
           "teacher": {
@@ -231,10 +248,10 @@ def create_group():
       }), 400
 
   name = data.get('name')
-  subject = data.get('subject')
+  subject_id = data.get('subject')
   teacher_id = data.get('teacher_id')  # может принимать значение None
 
-  if not name or not subject:
+  if not name or not subject_id:
       return jsonify({
           'error': 'Название и предмет обязательны'
       }), 400
@@ -249,7 +266,7 @@ def create_group():
 
   group = Group(
       name=name,
-      subject=subject,
+      subject_id=subject_id,
       teacher_id=teacher_id
   )
   db.session.add(group)
@@ -343,14 +360,15 @@ def edit_group(group_id):
           'error': 'Нет данных'
       }), 400
 
-  if not data.get('name') or not data.get('subject'):
+  if not data.get('name') or not data.get('subject_id'):
       return jsonify({
           'error': 'Название группы и предмет обязательны'
       }), 400
   
   group.name = data.get('name')
-  group.subject = data.get('subject')
-  group.teacher_id = data.get('teacher_id')
+  group.subject_id = data.get('subject_id')
+  group.teacher_id = data.get('teacher_id') 
+  group.is_active = data.get('is_active')
 
   db.session.commit()
 
@@ -1011,7 +1029,7 @@ def get_user(user_id):
             groups_data.append({
                 'id': g.id,
                 'name': g.name,
-                'subject': g.subject,
+                'subject': g.subject.name,
                 'teacher': g.teacher.email or g.teacher.id or None
             })
             print(groups_data)
@@ -1022,11 +1040,11 @@ def get_user(user_id):
             groups_data.append({
                 'id': g.id,
                 'name': g.name,
-                'subject': g.subject,
+                'subject': g.subject.name,
                 'teacher': g.teacher.email or g.teacher.id or None
             })
 
     return jsonify({
         'user': user.to_dict(),
-        'groups': groups_data
+        'groups': groups_data if groups_data else None
     })

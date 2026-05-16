@@ -141,7 +141,8 @@ class User(db.Model):
                 'role': 'student',
                 'first_name': 'Иван',
                 'last_name': 'Иванов',
-                'is_active': True
+                'is_active': True,
+                'created_at': '2026-05-16 08:09:39.956721'
             }
         """
         return {
@@ -150,7 +151,8 @@ class User(db.Model):
             'role': self.role,
             'first_name': self.first_name,
             'last_name': self.last_name,
-            'is_active': self.is_active
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None
         }
     
     @classmethod

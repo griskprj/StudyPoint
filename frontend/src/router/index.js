@@ -66,6 +66,11 @@ const router = createRouter({
           path: 'groups/:id',
           name: 'admin-group-detail',
           component: () => import('../views/AdminGroupDetailView.vue')
+        },
+        {
+          path: 'subjects',
+          name: 'admin-subjects',
+          component: () => import('../views/AdminSubjectView.vue')
         }
       ]
     }

@@ -65,70 +65,42 @@
         <span>Загрузка пользователей...</span>
       </div>
       
-      <table class="users-table">
+      <table class="users-table mobile-card-table">
         <thead>
           <tr>
-            <th class="col-id">
-              <span @click="toggleSort('id')" class="sortable">
-                ID
-                <i class="fa" :class="getSortIcon('id')"></i>
-              </span>
-            </th>
-            <th class="col-email">
-              <span @click="toggleSort('email')" class="sortable">
-                Email
-                <i class="fa" :class="getSortIcon('email')"></i>
-              </span>
-            </th>
-            <th class="col-role">Роль</th>
-            <th class="col-name">
-              <span @click="toggleSort('first_name')" class="sortable">
-                Имя
-                <i class="fa" :class="getSortIcon('first_name')"></i>
-              </span>
-            </th>
-            <th class="col-name">
-              <span @click="toggleSort('last_name')" class="sortable">
-                Фамилия
-                <i class="fa" :class="getSortIcon('last_name')"></i>
-              </span>
-            </th>
-            <th class="col-status">Статус</th>
-            <th class="col-actions">Действия</th>
+            <th>ID</th>
+            <th>Email</th>
+            <th>Роль</th>
+            <th>Имя</th>
+            <th>Фамилия</th>
+            <th>Статус</th>
+            <th>Действия</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in paginatedUsers" :key="user.id" class="user-row">
-            <td class="col-id">#{{ user.id }}</td>
-            <td class="col-email">
+          <tr v-for="user in paginatedUsers" :key="user.id">
+            <td data-label="ID">#{{ user.id }}</td>
+            <td data-label="Email">
               <div class="email-cell">
                 <i class="fa fa-envelope"></i>
                 <span>{{ user.email }}</span>
               </div>
             </td>
-            <td class="col-role">
+            <td data-label="Роль">
               <span class="role-badge" :class="getRoleClass(user.role)">
                 <i :class="getRoleIcon(user.role)"></i>
                 {{ getRoleName(user.role) }}
               </span>
             </td>
-            <td class="col-name">
-              <span class="name-cell">
-                {{ user.first_name || '—' }}
-              </span>
-            </td>
-            <td class="col-name">
-              <span class="name-cell">
-                {{ user.last_name || '—' }}
-              </span>
-            </td>
-            <td class="col-status">
+            <td data-label="Имя">{{ user.first_name || '—' }}</td>
+            <td data-label="Фамилия">{{ user.last_name || '—' }}</td>
+            <td data-label="Статус">
               <span class="status-badge" :class="user.is_active ? 'status-active' : 'status-inactive'">
                 <i :class="user.is_active ? 'fa fa-circle' : 'fa fa-circle-o'"></i>
                 {{ user.is_active ? 'Активен' : 'Неактивен' }}
               </span>
             </td>
-            <td class="col-actions">
+            <td data-label="Действия">
               <div class="action-buttons">
                 <router-link :to="'/admin/users/' + user.id" class="action-btn view-btn" title="Подробнее">
                   <i class="fa fa-eye"></i>
@@ -922,6 +894,99 @@ export default {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+
+/* Адаптивность для телефонов */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 0.75rem;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.125rem;
+    border-radius: 14px;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .filters-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters-left {
+    justify-content: center;
+  }
+
+  .filters-right {
+    justify-content: center;
+  }
+
+  .search-input, .search-input:focus {
+    width: 100%;
+  }
+
+  .users-table.mobile-card-table thead {
+    display: none;
+  }
+
+  .users-table.mobile-card-table tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 0.75rem;
+    background: var(--bg-card);
+  }
+
+  .users-table.mobile-card-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: none;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .users-table.mobile-card-table td:last-child {
+    border-bottom: none;
+  }
+
+  .users-table.mobile-card-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+  }
+
+  .users-table.mobile-card-table td.col-actions {
+    justify-content: flex-end;
+  }
+
+  .users-table.mobile-card-table .action-buttons {
+    flex-direction: row !important;
+    gap: 0.5rem;
+  }
+
+  .email-cell, .role-badge, .status-badge {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -5,7 +5,7 @@ from datetime import datetime
 from app.models.user import User
 from app.models.content import Test, Question, Homework, Material, Subject
 from app.extensions import db
-from app.utils.decorators import teacher_required
+from app.utils.decorators import teacher_required, admin_required
 
 '''
 
@@ -18,9 +18,17 @@ teacher_bp = Blueprint('teacher', __name__)
 # ПРЕДМЕТЫ
 # -------------------------
 
+@teacher_bp.route('/subjects', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_subjects():
+  subjects = Subject.query.all()
+
+  return jsonify([s.to_dict() for s in subjects])
+
 @teacher_bp.route('/subjects', methods=['POST'])
 @jwt_required()
-@teacher_required
+@admin_required
 def create_subject():
   data = request.get_json()
   if not data:
@@ -59,6 +67,52 @@ def create_subject():
     'subject': subject.to_dict()
   })
 
+
+@teacher_bp.route('/subjects/<int:subject_id>', methods=['DELETE'])
+@jwt_required()
+@admin_required
+def delete_subject(subject_id):
+  """Удаляет предмет."""
+  current_user = User.query.get(get_jwt_identity())
+  if current_user.role != 'admin':
+    return jsonify({
+      'error': 'Вы не являетесь администратором'
+    }), 403
+
+  subject = Subject.query.get(subject_id)
+  if not subject:
+    return jsonify({
+      'error': 'Предмет не найден'
+    }), 404
+  
+  db.session.delete(subject)
+  db.session.commit()
+
+  return jsonify({
+    'message': 'Предмет удален'
+  }), 200
+
+@teacher_bp.route('/subjects/<int:subject_id>', methods=['PUT'])
+@jwt_required()
+@admin_required
+def update_subject(subject_id):
+  current_user = User.query.get(get_jwt_identity())
+  subject = Subject.query.get(subject_id)
+  if not subject:
+    return jsonify({
+      'error': 'Предмет не найден'
+    }), 404
+
+  data = request.get_json()
+
+  if 'name' in data:
+    subject.name = data.get('name')
+  if 'code' in data:
+    subject.code = data.get('code')
+  if 'exam_type' in data:
+    subject.exam_type = data.get('exam_type')
+
+  return jsonify(subject.to_dict())
 
 # -------------------------
 # ТЕСТЫ

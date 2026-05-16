@@ -73,10 +73,11 @@ class Group(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    subject = db.Column(db.String(100), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     teacher_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
+    subject = db.relationship('Subject', backref='subject_groups')
     teacher = db.relationship('User', backref='groups_taught')
     students = db.relationship('User', secondary=group_students, lazy='subquery',
                               backref=db.backref('groups_as_student', lazy=True))
@@ -157,7 +158,8 @@ class Group(db.Model):
         result = {
             'id': self.id,
             'name': self.name,
-            'subject': self.subject,
+            'subject_id': self.subject_id,
+            'subject': self.subject.name,
             'is_active': self.is_active,
             'teacher': self.teacher.to_dict() if self.teacher else None,
             'students_count': len(self.students)

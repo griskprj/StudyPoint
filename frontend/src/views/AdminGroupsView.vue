@@ -20,8 +20,8 @@
           <i class="fa fa-book"></i>
           <select v-model="subjectFilter" @change="filterGroups" class="filter-select">
             <option value="">Все предметы</option>
-            <option v-for="subj in subjects" :key="subj" :value="subj">
-              {{ subj }}
+            <option v-for="subj in subjects" :key="subj.id" :value="subj.id">
+              {{ subj.name }}
             </option>
           </select>
         </div>
@@ -30,8 +30,8 @@
           <i class="fa fa-flag-checkered"></i>
           <select v-model="statusFilter" @change="filterGroups" class="filter-select">
             <option value="">Все статусы</option>
-            <option value="active">✅ Активна</option>
-            <option value="inactive">⛔ Неактивна</option>
+            <option value="active">Активна</option>
+            <option value="inactive">Неактивна</option>
           </select>
         </div>
       </div>
@@ -65,77 +65,57 @@
         <span>Загрузка групп...</span>
       </div>
       
-      <table class="groups-table">
+      <table class="groups-table mobile-card-table">
         <thead>
           <tr>
-            <th class="col-id">
-              <span @click="toggleSort('id')" class="sortable">
-                ID
-                <i class="fa" :class="getSortIcon('id')"></i>
-              </span>
-            </th>
-            <th class="col-name">
-              <span @click="toggleSort('name')" class="sortable">
-                Название
-                <i class="fa" :class="getSortIcon('name')"></i>
-              </span>
-            </th>
-            <th class="col-subject">Предмет</th>
-            <th class="col-teacher">
-              <span @click="toggleSort('teacher_email')" class="sortable">
-                Преподаватель
-                <i class="fa" :class="getSortIcon('teacher_email')"></i>
-              </span>
-            </th>
-            <th class="col-students">
-              <span @click="toggleSort('students_count')" class="sortable">
-                Учеников
-                <i class="fa" :class="getSortIcon('students_count')"></i>
-              </span>
-            </th>
-            <th class="col-status">Статус</th>
-            <th class="col-actions">Действия</th>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Предмет</th>
+            <th>Преподаватель</th>
+            <th>Учеников</th>
+            <th>Статус</th>
+            <th>Действия</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="group in paginatedGroups" :key="group.id" class="group-row">
-            <td class="col-id">#{{ group.id }}</td>
-            <td class="col-name">
+          <tr v-for="group in paginatedGroups" :key="group.id">
+            <td data-label="ID">#{{ group.id }}</td>
+            <td data-label="Название">
               <div class="name-cell">
                 <i class="fa fa-layer-group"></i>
                 <span>{{ group.name }}</span>
               </div>
             </td>
-            <td class="col-subject">
+            <td data-label="Предмет">
               <span class="subject-badge" :class="getSubjectClass(group.subject)">
                 <i :class="getSubjectIcon(group.subject)"></i>
                 {{ group.subject }}
               </span>
             </td>
-            <td class="col-teacher">
+            <td data-label="Преподаватель">
               <div class="teacher-cell">
                 <i class="fa fa-chalkboard-teacher"></i>
                 <span>{{ group.teacher?.email || '—' }}</span>
               </div>
             </td>
-            <td class="col-students">
+            <td data-label="Учеников">
               <span class="students-count" :class="{ 'has-students': group.students_count > 0 }">
                 <i class="fa fa-users"></i>
                 {{ group.students_count || 0 }}
               </span>
             </td>
-            <td class="col-status">
+            <td data-label="Статус">
               <span class="status-badge" :class="group.is_active ? 'status-active' : 'status-inactive'">
                 <i :class="group.is_active ? 'fa fa-circle' : 'fa fa-circle-o'"></i>
                 {{ group.is_active ? 'Активна' : 'Неактивна' }}
               </span>
             </td>
-            <td class="col-actions">
+            <td data-label="Действия">
               <div class="action-buttons">
                 <router-link :to="'/admin/groups/' + group.id" class="action-btn view-btn" title="Состав группы">
                   <i class="fa fa-users"></i>
                 </router-link>
-                <button @click="deleteGroup(group)" class="action-btn status-btn" title="Удалить"">
+                <button @click="deleteGroup(group)" class="action-btn status-btn" title="Удалить">
                   <i class="fa fa-trash"></i>
                 </button>
                 <button @click="openEditModal(group)" class="action-btn edit-btn" title="Редактировать">
@@ -154,7 +134,7 @@
             </td>
           </tr>
         </tbody>
-       </table>
+      </table>
 
       <!-- Пагинация -->
       <div v-if="filteredGroups.length > 0" class="pagination">
@@ -207,13 +187,17 @@
                 <i class="fa fa-book"></i>
                 Предмет
               </label>
-              <input 
-                v-model="formData.subject" 
-                type="text" 
+              <select
+                v-model="formData.subject_id" 
                 required 
-                placeholder="Например: Математика"
-                class="form-input"
+                class="form-select"
               >
+                <option value="">Выберите предмет</option>
+                <option v-for="subject in subjects" :value="subject.id" :key="subject.id">
+                  {{ subject.name }}
+                </option>
+              </select>
+                
             </div>
 
             <div class="form-group">
@@ -280,7 +264,7 @@ export default {
       editingGroupId: null,
       formData: {
         name: '',
-        subject: '',
+        subject: null,
         teacher_id: null,
         is_active: true
       },
@@ -378,17 +362,13 @@ export default {
       this.loading = true
       try {
         const response = await api.get('/admin/groups')
-        this.groups = response.data
-        this.updateSubjects()
+        this.groups = response.data.groups
+        this.subjects = response.data.subjects
       } catch (err) {
         console.error('Ошибка загрузки групп:', err)
       } finally {
         this.loading = false
       }
-    },
-
-    updateSubjects() {
-      this.subjects = [...new Set(this.groups.map(g => g.subject))]
     },
 
     filterGroups() {
@@ -428,7 +408,7 @@ export default {
       this.editingGroupId = null
       this.formData = {
         name: '',
-        subject: '',
+        subject_id: '',
         teacher_id: null,
         is_active: true
       }
@@ -441,7 +421,7 @@ export default {
       this.editingGroupId = group.id
       this.formData = {
         name: group.name,
-        subject: group.subject,
+        subject_id: group.subject_id,
         teacher_id: group.teacher_id,
         is_active: group.is_active
       }
@@ -463,7 +443,7 @@ export default {
         if (!payload.teacher_id) delete payload.teacher_id
 
         if (this.isEditing) {
-          const response = await api.patch(`/admin/groups/${this.editingGroupId}`, payload)
+          const response = await api.put(`/admin/groups/${this.editingGroupId}`, payload)
           const index = this.groups.findIndex(g => g.id === this.editingGroupId)
           this.groups[index] = response.data
         } else {
@@ -471,7 +451,6 @@ export default {
           this.groups.push(response.data)
         }
 
-        this.updateSubjects()
         this.closeModal()
       } catch (err) {
         this.formError = err.response?.data?.error || 'Ошибка при сохранении группы'
@@ -867,6 +846,12 @@ export default {
 /* Кнопки действий */
 .action-buttons {
   display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+.col-actions .action-buttons {
+  display: flex;
+  flex-direction: row;
   gap: 0.5rem;
 }
 
@@ -1241,7 +1226,12 @@ export default {
   }
 
   .groups-table tbody tr {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+
     margin-bottom: 1rem;
     border: 1px solid var(--border-color);
     border-radius: 16px;
@@ -1271,6 +1261,107 @@ export default {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 0.75rem;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.125rem;
+    border-radius: 14px;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .actions-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters-left {
+    justify-content: center;
+  }
+
+  .filters-right {
+    flex-direction: column;
+  }
+
+  .search-input, .search-input:focus {
+    width: 100%;
+  }
+
+  .btn-create {
+    justify-content: center;
+  }
+
+  /* Превращаем таблицу в карточки */
+  .groups-table.mobile-card-table thead {
+    display: none;
+  }
+
+  .groups-table.mobile-card-table tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 0.75rem;
+    background: var(--bg-card);
+  }
+
+  .groups-table.mobile-card-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: none;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .groups-table.mobile-card-table td:last-child {
+    border-bottom: none;
+  }
+
+  .groups-table.mobile-card-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+  }
+
+  .groups-table.mobile-card-table td.col-actions {
+    justify-content: flex-end;
+  }
+
+  .groups-table.mobile-card-table .action-buttons {
+    flex-direction: row !important;
+    gap: 0.5rem;
+  }
+
+  .name-cell, .teacher-cell {
+    justify-content: flex-end;
+  }
+
+  .subject-badge, .students-count, .status-badge {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

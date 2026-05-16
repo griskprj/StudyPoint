@@ -17,7 +17,7 @@
       <div class="profile-card">
         <div class="profile-header">
           <div class="profile-avatar">
-            <img :src="avatarUrl" alt="avatar" @error="handleAvatarError">
+            <img src="../assets/avatar.png" alt="avatar" @error="handleAvatarError">
             <div class="avatar-status" :class="user.is_active ? 'active' : 'inactive'"></div>
           </div>
           <div class="profile-info">
@@ -325,9 +325,6 @@
 <script>
 import api from '../services/api';
 
-// Статический путь к изображению-заглушке
-const DEFAULT_AVATAR = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%232748a3"/%3E%3Ctext x="50" y="67" text-anchor="middle" fill="white" font-size="40" dy=".3em"%3E👤%3C/text%3E%3C/svg%3E';
-
 export default {
   name: 'AdminUserDetailsView',
   data() {
@@ -348,13 +345,6 @@ export default {
         confirmText: '',
         action: null
       }
-    }
-  },
-
-  computed: {
-    avatarUrl() {
-      // Если есть URL аватара от сервера, используем его, иначе дефолтный
-      return this.user?.avatar_url || DEFAULT_AVATAR
     }
   },
 
