@@ -2,7 +2,7 @@ import axios from 'axios'
 import { getAccessToken, removeTokens, getRefreshToken, setTokens } from './auth'
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:5000/api',
+  baseURL: 'http://192.168.1.43:5000/api',
   headers: {
     'Content-Type': 'application/json'
   }

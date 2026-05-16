@@ -116,7 +116,6 @@ form {
   justify-content: center;
 
   text-align: center;
-
   animation: slideInUp 0.5s ease-out forwards;
 }
 

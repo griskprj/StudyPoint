@@ -180,3 +180,21 @@ label {
   font-weight: 500;
   color: var(--text-secondary);
 }
+
+.container {
+  max-width: 80%;
+  margin: 0 auto;
+
+  animation: slideInUp 0.5s ease-out forwards;  
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(5%);
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
