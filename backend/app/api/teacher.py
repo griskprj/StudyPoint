@@ -20,7 +20,6 @@ teacher_bp = Blueprint('teacher', __name__)
 
 @teacher_bp.route('/subjects', methods=['GET'])
 @jwt_required()
-@admin_required
 def get_subjects():
   subjects = Subject.query.all()
 
@@ -118,6 +117,35 @@ def update_subject(subject_id):
 # ТЕСТЫ
 # -------------------------
 
+@teacher_bp.route('/tests', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_my_tests():
+  """Получить список тестов, созданных текущим пользователем.
+  Можно отфильтровать по subject_id через query-параметр.
+  """
+
+  current_user_id = get_jwt_identity()
+  user = User.query.get(current_user_id)
+  query = Test.query.filter_by(author_id=current_user_id)
+
+  subject_id = request.args.get('subject_id', type=int)
+  if subject_id:
+    query = query.filter_by(subject_id=subject_id)
+
+  tests = query.order_by(Test.created_at.desc()).all()
+  return jsonify([t.to_dict(include_questions=False) for t in tests]), 200
+
+
+@teacher_bp.route('/teacher/tests', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_teacher_tests():
+  tests = Test.query.filter_by(author_id=get_jwt_identity()).limit(5).all()
+
+  return jsonify([t.to_dict() for t in tests])
+
+
 @teacher_bp.route('/tests', methods=['POST'])
 @jwt_required()
 @teacher_required
@@ -161,26 +189,6 @@ def create_test():
     'test_id': new_test.id,
     'title': new_test.title
   }), 201
-
-
-@teacher_bp.route('/tests', methods=['GET'])
-@jwt_required()
-@teacher_required
-def get_my_tests():
-  """Получить список тестов, созданных текущим пользователем.
-  Можно отфильтровать по subject_id через query-параметр.
-  """
-
-  current_user_id = get_jwt_identity()
-  user = User.query.get(current_user_id)
-  query = Test.query.filter_by(author_id=current_user_id)
-
-  subject_id = request.args.get('subject_id', type=int)
-  if subject_id:
-    query = query.filter_by(subject_id=subject_id)
-
-  tests = query.order_by(Test.created_at.desc()).all()
-  return jsonify([t.to_dict(include_questions=False) for t in tests]), 200
 
 
 @teacher_bp.route('/tests/<int:test_id>', methods=['GET'])
@@ -447,3 +455,18 @@ def reorder_questions(test_id):
   return jsonify({
     'message': 'Порядок вопросов обновлен'
   }), 200
+
+
+# ============
+# Домашнее задание
+# ============
+
+@teacher_bp.route('/homework/pending', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_pending_hw():
+  """ Получить домашнее задание, для которого необходима проверка. """
+  user_id = get_jwt_identity()
+  homework = Homework.query.filter_by(author_id=user_id).all()
+  
+  return jsonify([h.to_dict() for h in homework])

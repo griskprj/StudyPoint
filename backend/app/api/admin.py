@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.extensions import db
-from app.utils.decorators import admin_required
+from app.utils.decorators import admin_required, teacher_required
 from app.models.group import Group
 from app.models.user import User
 from app.models.content import Subject
@@ -92,12 +92,11 @@ def get_groups():
 
 @admin_bp.route('/groups/<int:group_id>', methods=['GET'])
 @jwt_required()
-@admin_required
 def get_group(group_id: int) -> dict:
   """Получить группу по ID.
   
   Возвращает данные конкретной группы, включая информацию о преподавателе и учениках.
-  Требует аутентификации и роли администратора.
+  Требует аутентификации.
 
   Args:
       group_id (int): ID группы.
@@ -163,6 +162,16 @@ def get_group(group_id: int) -> dict:
       }), 404
 
   return jsonify(group.to_dict(include_students=True)), 200
+
+
+@admin_bp.route('/groups/teacher', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_teacher_groups():
+    """Получить группы учителя."""
+    groups = Group.query.filter_by(teacher_id=get_jwt_identity()).all()
+
+    return jsonify([g.to_dict() for g in groups])
 
 
 @admin_bp.route('/groups', methods=['POST'])

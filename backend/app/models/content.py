@@ -169,6 +169,25 @@ class Homework(db.Model):
     group = db.relationship('Group', backref='homeworks')
     submissions = db.relationship('HomeworkSubmission', backref='homework', lazy='dynamic', cascade='all, delete-orphan')
 
+    def to_dict(self, include_groups: bool, include_submissions: bool) -> dict:
+        data = {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'author_id': self.author_id,
+            'author_name': self.author.first_name + ' ' + self.author.last_name,
+            'topic_id': self.topic_id,
+            'group_id': self.group_id,
+            'deadline': self.deadline.isoformat(),
+        }
+
+        if include_groups:
+            data['groups'] = [g.to_dict() for g in self.group]
+        if include_submissions:
+            data['submissions'] = [s.to_dict() for s in self.submissions]
+
+        return data
+
 class HomeworkSubmission(db.Model):
     __tablename__ = 'homework_submissions'
     id = db.Column(db.Integer, primary_key=True)
@@ -181,3 +200,16 @@ class HomeworkSubmission(db.Model):
     grade = db.Column(db.Float)
     comment = db.Column(db.Text)
     checked_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'homework_id': self.homework_id,
+            'student_id': self.student_id,
+            'submitted_at': self.submitted_at,
+            'text_response': self.text_response,
+            'comment': self.comment,
+            'grade': self.grade,
+            'checked_by_id': self.checked_by_id
+        }
