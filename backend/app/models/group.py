@@ -81,8 +81,10 @@ class Group(db.Model):
     teacher = db.relationship('User', backref='groups_taught')
     students = db.relationship('User', secondary=group_students, lazy='subquery',
                               backref=db.backref('groups_as_student', lazy=True))
+    tests = db.relationship('Test', backref='groups_tests')
+    homeworks = db.relationship('Homework', backref='groups_homework')
 
-    def to_dict(self, include_students: bool = False) -> dict:
+    def to_dict(self, include_students: bool = False, include_homeworks: bool = False, include_tests: bool = False) -> dict:
         """Сериализовать объект группы в словарь.
         
         Возвращает представление группы с информацией о преподавателе
@@ -162,9 +164,15 @@ class Group(db.Model):
             'subject': self.subject.name,
             'is_active': self.is_active,
             'teacher': self.teacher.to_dict() if self.teacher else None,
-            'students_count': len(self.students)
+            'students_count': len(self.students),
+            'homeworks_count': len(self.homeworks),
+            'tests_count': len(self.tests)
         }
         if include_students:
             result['students'] = [s.to_dict() for s in self.students]
+        if include_homeworks:
+            result['homeworks'] = [h.to_dict() for h in self.homeworks]
+        if include_tests:
+            result['tests'] = [t.to_dict() for t in self.tests]
 
         return result

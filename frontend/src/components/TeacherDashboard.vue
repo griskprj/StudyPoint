@@ -122,7 +122,7 @@
               <div class="homework-info">
                 <span class="homework-title">{{ hw.title }}</span>
                 <span class="homework-meta">
-                  {{ hw.student_name }} • {{ hw.group_name }}
+                  {{ hw.description}}
                 </span>
               </div>
               <button @click="goToHomeworkSubmission(hw.id)" class="item-action">
@@ -290,6 +290,7 @@ export default {
       try {
         const response = await api.get('/teacher/homework/pending')
         this.pendingHomework = Array.isArray(response.data) ? response.data : (response.data.submissions || [])
+        console.log(this.pendingHomework)
       } catch (err) {
         console.error('Ошибка загрузки домашних заданий:', err)
         this.pendingHomework = []

@@ -63,6 +63,7 @@ class Test(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False)
     subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     duration_minutes = db.Column(db.Integer)
@@ -166,10 +167,9 @@ class Homework(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     author = db.relationship('User', backref='homeworks_authored')
-    group = db.relationship('Group', backref='homeworks')
     submissions = db.relationship('HomeworkSubmission', backref='homework', lazy='dynamic', cascade='all, delete-orphan')
 
-    def to_dict(self, include_groups: bool, include_submissions: bool) -> dict:
+    def to_dict(self, include_groups: bool =False, include_submissions: bool =False) -> dict:
         data = {
             'id': self.id,
             'title': self.title,

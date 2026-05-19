@@ -3,15 +3,56 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 
 from app.models.user import User
+from app.models.group import Group
 from app.models.content import Test, Question, Homework, Material, Subject
 from app.extensions import db
 from app.utils.decorators import teacher_required, admin_required
 
-'''
-
-'''
 
 teacher_bp = Blueprint('teacher', __name__)
+
+
+# -------------------------
+# ГРУППЫ
+# -------------------------
+
+@teacher_bp.route('/groups', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_teacher_groups():
+  """ Получить все группы учителя и статистику по его группам. """
+  user_id = int(get_jwt_identity())
+  groups = Group.query.filter_by(teacher_id=user_id).all()
+  homeworks_count = len([h for h in Homework.query.filter_by(author_id=user_id).all()])
+  tests_count = len([t for t in Test.query.filter_by(author_id=user_id).all()])
+
+  print(homeworks_count)
+  print(tests_count)
+
+  return jsonify({
+    'groups': [g.to_dict(include_homeworks=True, include_tests=True) for g in groups],
+    'homeworks_count': homeworks_count,
+    'tests_count': tests_count
+    }), 200
+
+
+@teacher_bp.route('/groups/<int:group_id>', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_group(group_id):
+  """ Получить группу учителя. """
+  group = Group.query.get(group_id)
+  if not group:
+    return jsonify({
+      'error': 'Группа не найдена'
+    }), 404
+
+  if group.teacher_id != int(get_jwt_identity()):
+    return jsonify({
+      'error': 'Вы не являетесь преподавателем этой группы'
+    }), 403
+
+  return jsonify(group.to_dict(include_students=True)), 200
 
 
 # -------------------------
@@ -23,7 +64,7 @@ teacher_bp = Blueprint('teacher', __name__)
 def get_subjects():
   subjects = Subject.query.all()
 
-  return jsonify([s.to_dict() for s in subjects])
+  return jsonify([s.to_dict() for s in subjects]), 200
 
 @teacher_bp.route('/subjects', methods=['POST'])
 @jwt_required()
@@ -64,7 +105,7 @@ def create_subject():
   return jsonify({
     'message': 'Предмет создан',
     'subject': subject.to_dict()
-  })
+  }), 200
 
 
 @teacher_bp.route('/subjects/<int:subject_id>', methods=['DELETE'])
@@ -111,13 +152,13 @@ def update_subject(subject_id):
   if 'exam_type' in data:
     subject.exam_type = data.get('exam_type')
 
-  return jsonify(subject.to_dict())
+  return jsonify(subject.to_dict()), 200
 
 # -------------------------
 # ТЕСТЫ
 # -------------------------
 
-@teacher_bp.route('/tests', methods=['GET'])
+@teacher_bp.route('/author-tests', methods=['GET'])
 @jwt_required()
 @teacher_required
 def get_my_tests():
@@ -137,14 +178,38 @@ def get_my_tests():
   return jsonify([t.to_dict(include_questions=False) for t in tests]), 200
 
 
-@teacher_bp.route('/teacher/tests', methods=['GET'])
+@teacher_bp.route('/tests', methods=['GET'])
 @jwt_required()
 @teacher_required
 def get_teacher_tests():
+  """ Получить тесты, созданные учителем. """
+
   tests = Test.query.filter_by(author_id=get_jwt_identity()).limit(5).all()
 
   return jsonify([t.to_dict() for t in tests])
 
+
+@teacher_bp.route('/groups/<int:group_id>/assigned-tests', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_group_assigned_tests(group_id):
+  """ Получить тесты, назначенные группе. """
+  group = Group.query.get(group_id)
+  if not group:
+    return jsonify({
+      'error': 'Группа не найдена'
+    }), 404
+
+  user_id = int(get_jwt_identity())
+  if group.teacher_id != user_id:
+    return jsonify({
+      'error': 'Вы не являетесь преподавателем этой группы'
+    }), 403
+
+  tests = group.tests
+  tests_data = [t.to_dict() for t in tests]
+
+  return jsonify(tests_data), 200
 
 @teacher_bp.route('/tests', methods=['POST'])
 @jwt_required()
@@ -469,4 +534,86 @@ def get_pending_hw():
   user_id = get_jwt_identity()
   homework = Homework.query.filter_by(author_id=user_id).all()
   
+  homeworks_data = []
+  for hw in homework:
+    submissions = [s for s in hw.submissions]
+    if len(submissions) > 0:
+      homeworks_data.append([s.to_dict() for s in submissions])
+  
+  return jsonify(homeworks_data)
+
+
+@teacher_bp.route('/groups/<int:group_id>/homeworks', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_group_homeworks(group_id):
+  """ Получить домашнее задание группы. """
+  group = Group.query.get(group_id)
+  if not group:
+    return jsonify({
+      'error': 'Группа не найдена'
+    }), 404
+  
+  user_id = int(get_jwt_identity())
+
+  if group.teacher_id != user_id:
+    return jsonify({
+      'error': 'Вы не являетесь преподавателем этой группы'
+    }), 403
+
+  homework = Homework.query.filter_by(group_id=group_id).all()
+  
   return jsonify([h.to_dict() for h in homework])
+
+
+@teacher_bp.route('/homeworks', methods=['POST'])
+@jwt_required()
+@teacher_required
+def create_homework():
+  """ Создать домашнее задание для группы """
+  data = request.get_json()
+
+  user_id = int(get_jwt_identity())
+  group_id = data.get('group_id')
+
+  group = Group.query.get(group_id)
+  if not group:
+    return jsonify({
+      'error': 'Группа не найдена'
+    }), 404
+  if group.teacher_id != user_id:
+    return jsonify({
+      'error': 'Вы не являетесь преподавателем этой группы'
+    }), 403
+
+  title = data.get('title')
+  subject_id = group.subject_id
+  description = data.get('description')
+  client_deadline = (data.get('deadline'))
+  deadline = datetime.fromisoformat(client_deadline)
+  allow_late_submission = data.get('allow_late_submission')
+  current_date = datetime.now()
+
+  if not description or not deadline:
+    return jsonify({
+      'error': 'Описание и дедлайн обязательны'
+    }), 400
+  if current_date > deadline:
+    return jsonify({
+      'error': 'Дедлайн не может быть в будущем'
+    })
+
+  homework = Homework(
+    title=title,
+    author_id=user_id,
+    subject_id=subject_id,
+    group_id=group_id,
+    description=description,
+    deadline=deadline,
+    allow_late_submission=allow_late_submission
+  )
+
+  db.session.add(homework)
+  db.session.commit()
+
+  return jsonify(homework.to_dict())

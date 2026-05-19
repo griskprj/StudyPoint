@@ -73,6 +73,16 @@ const router = createRouter({
           component: () => import('../views/AdminSubjectView.vue')
         }
       ]
+    },
+    {
+      path: '/teacher/groups/:id',
+      name: 'teacher-group-detail',
+      component: () => import('../views/teacher/TeacherGroupDetails.vue')
+    },
+    {
+      path: '/teacher/groups',
+      name: 'teacher-groups',
+      component: () => import('../views/teacher/TeacherGroups.vue')
     }
   ]
 })
